@@ -1,0 +1,17 @@
+# Python virtual environments and caches
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Relay generated artifacts
+Relay/*.db
+Relay/*.log
+Relay/SMTP_Relay
+Relay/smtp_relay
+Relay/storage/files/
+Relay/.env
+
+# Generic archives
+*.tar.gz
+*.zip

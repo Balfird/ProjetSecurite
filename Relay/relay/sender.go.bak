@@ -1,0 +1,175 @@
+package relay
+
+import (
+	"fmt"
+	"log"
+	"net"
+	"net/smtp"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/Matthdd/SMTP_Relay/config"
+	"github.com/Matthdd/SMTP_Relay/queue"
+)
+
+// Sender handles sending messages directly to recipient MX servers
+type Sender struct {
+	cfg *config.Config
+}
+
+// NewSender creates a new Sender
+func NewSender(cfg *config.Config) *Sender {
+	return &Sender{cfg: cfg}
+}
+
+// Send processes a message and delivers it directly to recipient MX servers
+// It ignores the upstream configuration and authentication.
+func (s *Sender) Send(msg *queue.Message, username, password string) error {
+	// Group recipients by domain
+	domains := make(map[string][]string)
+	for _, rcpt := range msg.To {
+		domain := getDomain(rcpt)
+		if domain == "" {
+			log.Printf("Skipping invalid recipient: %s", rcpt)
+			continue
+		}
+		domains[domain] = append(domains[domain], rcpt)
+	}
+
+	var errs []string
+
+	// Send to each domain separately
+	for domain, rcpts := range domains {
+		log.Printf("Delivering to domain: %s (recipients: %v)", domain, rcpts)
+		err := s.deliverToDomain(domain, rcpts, msg)
+		if err != nil {
+			errStr := fmt.Sprintf("failed to deliver to %s: %v", domain, err)
+			log.Println("ERROR:", errStr)
+			errs = append(errs, errStr)
+		} else {
+			log.Printf("Successfully delivered to %s", domain)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("delivery errors: %s", strings.Join(errs, "; "))
+	}
+
+	return nil
+}
+
+func (s *Sender) deliverToDomain(domain string, rcpts []string, msg *queue.Message) error {
+	// 1. Lookup MX records
+	mxs, err := net.LookupMX(domain)
+	if err != nil {
+		return fmt.Errorf("MX lookup failed: %w", err)
+	}
+
+	if len(mxs) == 0 {
+		return fmt.Errorf("no MX records found for %s", domain)
+	}
+
+	// Sort by preference (lowest first)
+	sort.Slice(mxs, func(i, j int) bool {
+		return mxs[i].Pref < mxs[j].Pref
+	})
+
+	// 2. Try each MX
+	var lastErr error
+	for _, mx := range mxs {
+		host := mx.Host
+		// Remove trailing dot if present
+		host = strings.TrimSuffix(host, ".")
+		
+		addr := fmt.Sprintf("%s:25", host) // Always port 25 for inter-server
+		log.Printf("Connecting to MX %s (%s)...", host, addr)
+
+		// Set timeout
+		conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+		if err != nil {
+			log.Printf("Failed to connect to %s: %v", host, err)
+			lastErr = err
+			continue
+		}
+
+		// Connect to SMTP server
+		c, err := smtp.NewClient(conn, host)
+		if err != nil {
+			conn.Close()
+			log.Printf("Failed to create SMTP client for %s: %v", host, err)
+			lastErr = err
+			continue
+		}
+
+		// Send HELO/EHLO
+		if err = c.Hello("localhost"); err != nil { // Should ideally use our public hostname
+			c.Close()
+			lastErr = err
+			continue
+		}
+
+		// Note: We skip StartTLS and Auth for direct delivery usually, 
+		// unless we want to support opportunistic encryption.
+		// For simplicity/compatibility with this task, we go plain or simple.
+		// Many servers REQUIRE TLS locally, but accept plain on port 25 IF they support it.
+		// Let's try to send simple first.
+
+		// Mail From
+		if err = c.Mail(msg.From); err != nil {
+			c.Close()
+			lastErr = err
+			continue
+		}
+
+		// Rcpt To (loop)
+		recipientsAccepted := 0
+		for _, rcpt := range rcpts {
+			if err = c.Rcpt(rcpt); err != nil {
+				log.Printf("Recipient %s rejected by %s: %v", rcpt, host, err)
+				// We continue to try other recipients
+			} else {
+				recipientsAccepted++
+			}
+		}
+
+		if recipientsAccepted == 0 {
+			c.Quit()
+			return fmt.Errorf("all recipients rejected by %s", host)
+		}
+
+		// Data
+		w, err := c.Data()
+		if err != nil {
+			c.Close()
+			lastErr = err
+			continue
+		}
+		_, err = w.Write(msg.Data)
+		if err != nil {
+			w.Close() // Error on write
+			c.Close()
+			lastErr = err
+			continue
+		}
+		err = w.Close()
+		if err != nil {
+			c.Close()
+			lastErr = err
+			continue
+		}
+
+		c.Quit()
+		return nil // Success!
+	}
+
+	return fmt.Errorf("failed to deliver to any MX for %s (Last error: %v)", domain, lastErr)
+}
+
+func getDomain(email string) string {
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return ""
+	}
+	return strings.ToLower(parts[1])
+}

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMTP Relay Dashboard</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --warning: #eab308;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--surface);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        header {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+            cursor: pointer;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-Queued {
+            background-color: #fef9c3;
+            color: #854d0e;
+        }
+
+        .status-Sent {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .status-Failed {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .time {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background-color: var(--surface);
+            margin: 5% auto;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 800px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close {
+            color: var(--text-secondary);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover {
+            color: var(--text);
+        }
+
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .field {
+            margin-bottom: 20px;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .field-value {
+            font-size: 0.95rem;
+            word-break: break-word;
+        }
+
+        pre {
+            background-color: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+        }
+
+        .attachment-link {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            padding: 6px 12px;
+            background-color: #eff6ff;
+            color: var(--primary);
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            transition: background-color 0.2s;
+        }
+
+        .attachment-link:hover {
+            background-color: #dbeafe;
+        }
+
+        .pagination {
+            padding: 15px 30px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pagination-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            text-decoration: none;
+            color: var(--text);
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(.disabled) {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .pagination-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            padding: 4px;
+        }
+
+        .delete-btn:hover {
+            opacity: 1;
+        }
+
+        .error-message {
+            color: var(--danger);
+            background-color: #fef2f2;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #fee2e2;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>SMTP Relay Dashboard</h1>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <label>
+                    Status:
+                    <select onchange="changeFilter(this.value)" style="padding: 4px; border-radius: 4px;">
+                        <option value="" {{if eq .Status "" }}selected{{end}}>All</option>
+                        <option value="Sent" {{if eq .Status "Sent" }}selected{{end}}>Sent</option>
+                        <option value="Failed" {{if eq .Status "Failed" }}selected{{end}}>Failed</option>
+                        <option value="Queued" {{if eq .Status "Queued" }}selected{{end}}>Queued</option>
+                    </select>
+                </label>
+                <label>
+                    Per page:
+                    <select onchange="changeLimit(this.value)" style="padding: 4px; border-radius: 4px;">
+                        <option value="10" {{if eq .Pagination.Limit 10}}selected{{end}}>10</option>
+                        <option value="50" {{if eq .Pagination.Limit 50}}selected{{end}}>50</option>
+                        <option value="100" {{if eq .Pagination.Limit 100}}selected{{end}}>100</option>
+                    </select>
+                </label>
+                <div>
+                    <span style="color: var(--text-secondary); font-size: 0.875rem;">Status: </span>
+                    <span style="color: var(--success); font-weight: 600;">● Active</span>
+                </div>
+            </div>
+        </header>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Subject</th>
+                    <th><span style="font-size:1.2em">📎</span></th>
+                    <th>Status</th>
+                    <th>Error</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Emails}}
+                <tr class="email-row"
+                    onclick="openModal('{{.ID}}', '{{.From}}', '{{.To}}', '{{.Subject}}', '{{.Status}}', '{{.CreatedAt}}', '{{.Error}}')">
+                    <td>{{.From}}</td>
+                    <td>{{.To}}</td>
+                    <td>{{.Subject}}</td>
+                    <td>
+                        {{if .Attachments}}
+                        <span title="{{len .Attachments}} attachment(s)">📎</span>
+                        {{end}}
+                    </td>
+                    <td><span class="status status-{{.Status}}">{{.Status}}</span></td>
+                    <td style="color: var(--danger); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                        title="{{.Error}}">{{.Error}}</td>
+                    <td class="time">{{.CreatedAt.Format "Jan 02 15:04:05"}}</td>
+                    <td onclick="event.stopPropagation()">
+                        <button class="delete-btn" onclick="deleteEmail('{{.ID}}')" title="Delete Email">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+                <!-- OPTIMIZATION: Removed hidden body input. Attachments data hidden div remains for list view if needed, or we fetch details. -->
+                <div id="atts-{{.ID}}" style="display:none;">
+                    {{range .Attachments}}
+                    <a href="/attachment/{{.Path}}" target="_blank" class="attachment-link"
+                        download="{{.Filename}}">{{.Filename}} ({{.Size}} bytes)</a>
+                    {{end}}
+                </div>
+                {{else}}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        No emails found.
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+
+        <!-- Pagination Controls -->
+        {{if ne .Pagination.Limit -1}}
+        <div class="pagination">
+            <div>
+                Showing page {{.Pagination.CurrentPage}} of {{.Pagination.TotalPages}} ({{.Pagination.TotalCount}}
+                total)
+            </div>
+            <div style="display: flex; gap: 8px;">
+                {{if .Pagination.HasPrev}}
+                <a href="?page={{.Pagination.PrevPage}}&limit={{.Pagination.Limit}}&status={{$.Status}}"
+                    class="pagination-btn">Previous</a>
+                {{else}}
+                <span class="pagination-btn disabled">Previous</span>
+                {{end}}
+
+                {{if .Pagination.HasNext}}
+                <a href="?page={{.Pagination.NextPage}}&limit={{.Pagination.Limit}}&status={{$.Status}}"
+                    class="pagination-btn">Next</a>
+                {{else}}
+                <span class="pagination-btn disabled">Next</span>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Modal -->
+    <div id="emailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin:0; font-size:1.25rem;">Email Details</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- Error Message Banner -->
+                <div id="m-error" class="error-message field"></div>
+
+                <div class="field">
+                    <span class="field-label">From</span>
+                    <div class="field-value" id="m-from"></div>
+                </div>
+                <div class="field">
+                    <span class="field-label">To</span>
+                    <div class="field-value" id="m-to"></div>
+                </div>
+                <div class="field">
+                    <span class="field-label">Subject</span>
+                    <div class="field-value" id="m-subject"></div>
+                </div>
+                <div class="field">
+                    <span class="field-label">Attachments</span>
+                    <div class="field-value" id="m-attachments"></div>
+                </div>
+                <div class="field">
+                    <span class="field-label">Body</span>
+                    <pre id="m-body">Loading...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal(id, from, to, subject, status, time, errorMsg) {
+            document.getElementById('m-from').textContent = from;
+            document.getElementById('m-to').textContent = to;
+            document.getElementById('m-subject').textContent = subject;
+            document.getElementById('m-body').textContent = "Loading...";
+
+            // Handle Error Message
+            var errorDiv = document.getElementById('m-error');
+            if (errorMsg && errorMsg.trim() !== "") {
+                errorDiv.textContent = "Error: " + errorMsg;
+                errorDiv.style.display = "block";
+            } else {
+                errorDiv.style.display = "none";
+            }
+
+            // Attachments (Initial load from list view if available, or fetch)
+            // We still have 'atts-ID' divs populated in list
+            var attDiv = document.getElementById('atts-' + id);
+            var destDiv = document.getElementById('m-attachments');
+            destDiv.innerHTML = '';
+            if (attDiv && attDiv.innerHTML.trim() !== '') {
+                destDiv.innerHTML = attDiv.innerHTML;
+            } else {
+                destDiv.textContent = 'None';
+            }
+
+            document.getElementById('emailModal').style.display = "block";
+
+            // Fetch full body
+            fetch('/email/details/' + id)
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to load');
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('m-body').textContent = data.Body || "(No content)";
+                })
+                .catch(err => {
+                    document.getElementById('m-body').textContent = "Error loading body.";
+                    console.error(err);
+                });
+        }
+
+        function closeModal() {
+            document.getElementById('emailModal').style.display = "none";
+        }
+
+        window.onclick = function (event) {
+            if (event.target == document.getElementById('emailModal')) {
+                closeModal();
+            }
+        }
+
+        function changeLimit(newLimit) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('limit', newLimit);
+            url.searchParams.set('page', 1); // Reset to page 1
+            window.location.href = url.toString();
+        }
+
+        function changeFilter(newStatus) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('status', newStatus);
+            url.searchParams.set('page', 1); // Reset to page 1
+            window.location.href = url.toString();
+        }
+
+        function deleteEmail(id) {
+            if (confirm("Are you sure you want to delete this email? This cannot be undone.")) {
+                fetch('/email/delete/' + id, {
+                    method: 'DELETE',
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            alert("Failed to delete email.");
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert("An error occurred.");
+                    });
+            }
+        }
+    </script>
+</body>
+
+</html>
