@@ -4,6 +4,11 @@ venv/
 __pycache__/
 *.pyc
 
+# Email_Response generated artifacts
+Email_Response/venv/
+Email_Response/*.log
+Email_Response/sent_emails/
+
 # Relay generated artifacts
 Relay/*.db
 Relay/*.log
