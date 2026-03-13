@@ -1,0 +1,93 @@
+{
+  "accounts": [
+    {
+      "email_address": "contact@anne-gerard.net",
+      "password": "mdppxk3y8t7Y8y",
+      "imap_server": "anne-gerard.net",
+      "imap_port": 993,
+      "smtp_server": "smtp.anne-gerard.net",
+      "smtp_port": 587,
+      "is_gmail": false
+    },
+    {
+      "email_address": "contact@11laposte.net",
+      "password": "mdppxk3y8t7Y8y",
+      "imap_server": "11laposte.net",
+      "imap_port": 993,
+      "smtp_server": "smtp.11laposte.net",
+      "smtp_port": 587,
+      "is_gmail": false
+    },
+    {
+      "email_address": "contact@esthetiqueautopropre.com",
+      "password": "mdppxk3y8t7Y8y",
+      "imap_server": "esthetiqueautopropre.com",
+      "imap_port": 993,
+      "smtp_server": "smtp.esthetiqueautopropre.com",
+      "smtp_port": 587,
+      "is_gmail": false
+    },
+    {
+      "email_address": "contact@ergo-concepts.fr",
+      "password": "mdppxk3y8t7Y8y",
+      "imap_server": "ergo-concepts.fr",
+      "imap_port": 993,
+      "smtp_server": "smtp.ergo-concepts.fr",
+      "smtp_port": 587,
+      "is_gmail": false
+    },
+    {
+      "email_address": "contact@newaircraftsolution.com",
+      "password": "mdppxk3y8t7Y8y",
+      "imap_server": "newaircraftsolution.com",
+      "imap_port": 993,
+      "smtp_server": "smtp.newaircraftsolution.com",
+      "smtp_port": 587,
+      "is_gmail": false
+    },
+    {
+      "email_address": "contact@atvm94.org",
+      "password": "mdppxk3y8t7Y8y",
+      "imap_server": "atvm94.org",
+      "imap_port": 993,
+      "smtp_server": "smtp.atvm94.org",
+      "smtp_port": 587,
+      "is_gmail": false
+    },
+    {
+      "email_address": "contact@next-wireless.co",
+      "password": "mdppxk3y8t7Y8y",
+      "imap_server": "next-wireless.co",
+      "imap_port": 993,
+      "smtp_server": "smtp.next-wireless.co",
+      "smtp_port": 587,
+      "is_gmail": false
+    },
+    {
+      "email_address": "contact@yolan.dev",
+      "password": "mdppxk3y8t7Y8y",
+      "imap_server": "yolan.dev",
+      "imap_port": 993,
+      "smtp_server": "smtp.yolan.dev",
+      "smtp_port": 587,
+      "is_gmail": false
+    },
+    {
+      "email_address": "contact@senghor.me",
+      "password": "mdppxk3y8t7Y8y",
+      "imap_server": "senghor.me",
+      "imap_port": 993,
+      "smtp_server": "smtp.senghor.me",
+      "smtp_port": 587,
+      "is_gmail": false
+    }
+  ],
+  "ollama": {
+    "base_url": "http://localhost:11434",
+    "model": "gemma3:4b"
+  },
+  "automation": {
+    "check_interval_minutes": 2,
+    "max_emails_per_run": 50
+  }
+}
